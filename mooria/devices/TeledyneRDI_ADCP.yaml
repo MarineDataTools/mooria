@@ -1,0 +1,15 @@
+Workhorse:
+  parameters:
+    - u
+    - v
+    - w
+    - p
+  beam_angle: 20
+  range: ''
+  bottom_track_range: ''
+  sampling_frequency: ''
+  company: Teledyne RDI
+  orientation:
+    - options:
+        - 'up'
+        - 'down'
