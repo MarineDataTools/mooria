@@ -48,14 +48,55 @@ class mainWidget(QtWidgets.QWidget):
         QtWidgets.QWidget.__init__(self)        
         self.moorings = []
         mooring = self.create_mooring_widget()
+        self.allmoorings = self.create_allmoorings_widget()        
         # Tabs
         self.tabs = QtWidgets.QTabWidget()
+        self.tabs.addTab(self.allmoorings['widget'],'Moorings')        
         self.tabs.addTab(mooring['widget'],'Mooring')
         self.layout = QtWidgets.QGridLayout(self)
         self.layout.addWidget(self.tabs,2,0,1,2)        
+        
+    def create_allmoorings_widget(self):
+        mooring = {}
+        mooring['widget']     = QtWidgets.QWidget()
+        mooring['layout']     = QtWidgets.QGridLayout(mooring['widget'])
+        mooring['table']  = QtWidgets.QTableWidget()
+        mooring['table'].cellChanged.connect(self._allmoorings_cell_changed)
+        mooring['edmoor']    = QtWidgets.QPushButton('Edit')
+        mooring['edmoor'].clicked.connect(self.edit_mooring)                
+        mooring['addmoor']    = QtWidgets.QPushButton('Add')
+        mooring['addmoor'].clicked.connect(self.add_mooring)
+        mooring['remmoor']    = QtWidgets.QPushButton('Rem')
+        mooring['remmoor'].clicked.connect(self.rem_mooring)        
+        # Layout
+        mooring['layout'].addWidget(mooring['table'],0,0,1,2)
+        mooring['layout'].addWidget(mooring['edmoor'],1,0,1,2)        
+        mooring['layout'].addWidget(mooring['addmoor'],2,0)
+        mooring['layout'].addWidget(mooring['remmoor'],2,1)                
 
+        # Creates the mooring table
+        table = mooring['table']
+        mooring['headers'] = {}
+        mooring['headers']['Name'] = 0
+        mooring['headers']['Long term mooring name'] = 1 # If the mooring is part of a sequential series of deployments
+        mooring['headers']['Deployed']  = 2
+        mooring['headers']['Recovered'] = 3
+        mooring['headers']['Longitude'] = 4
+        mooring['headers']['Latitude']  = 5
+        mooring['headers']['Campaign']  = 6        
+        mooring['headers']['Comments']  = 7               
+        table.setColumnCount(len(mooring['headers']))
+        hlabels = list(mooring['headers'])
+        mooring['header_labels'] = hlabels
+        table.setHorizontalHeaderLabels(hlabels)
+        table.resizeColumnsToContents()
 
+        return mooring
+
+        
     def create_mooring_widget(self):
+        """
+        """
         mooring = {}
         mooring['widget']     = QtWidgets.QWidget()
         mooring['layout']     = QtWidgets.QGridLayout(mooring['widget'])
@@ -65,7 +106,7 @@ class mainWidget(QtWidgets.QWidget):
         mooring['layout'].addWidget(mooring['moortable'],0,0)
         mooring['layout'].addWidget(mooring['devwidget'],0,1)
         mooring['layout'].addWidget(mooring['devtable'],0,2)
-
+        
         # Fill the devices table
         table = mooring['devtable']
         table.setColumnCount(1)
@@ -75,12 +116,53 @@ class mainWidget(QtWidgets.QWidget):
             item = QtWidgets.QTableWidgetItem( dev )            
             table.insertRow(row)
             table.setItem(row,0,item)
-
+            
         table.resizeColumnsToContents()
+        device_name = list(devices.keys())[0]
+        device = devices[device_name]
+        self.update_device_widget(mooring, device_name,device)
         
         self.moorings.append(mooring)
         return mooring
     
+    def update_device_widget(self,mooring,device_name,device):
+        mooring['devwidget_layout'] = QtWidgets.QVBoxLayout(mooring['devwidget'])
+        lab = QtWidgets.QLabel(device_name)
+        mooring['devwidget_layout'].addWidget(lab)        
+        lab2 = QtWidgets.QLabel('Test')
+        print(device)
+        for i,k in enumerate(device.keys()):
+            lab2 = QtWidgets.QLabel(k)
+            mooring['devwidget_layout'].addWidget(lab2)
+
+        #mooring['devwidget_layout'].insertWidget(1,lab2)
+        mooring['devwidget_layout'].addStretch()
+
+    def add_mooring(self):
+        table = self.allmoorings['table']        
+        table.insertRow(0)
+        print('add')
+
+    def rem_mooring(self):
+        print('rem')        
+        pass
+
+    def edit_mooring(self):
+        print('edit')        
+        pass
+
+    def _allmoorings_cell_changed(self,row,column):
+        print(row,column)
+        lab = self.allmoorings['header_labels'][column] # Get the label
+        if('longitude' in lab.lower()):
+            print('Longitude')
+        if('latitude' in lab.lower()):
+            print('Latitude')
+        if('deployed' in lab.lower()):
+            print('deployed')
+        if('recovered' in lab.lower()):
+            print('recovered')                                    
+        
 
 class mooriaMainWindow(QtWidgets.QMainWindow):
     def __init__(self,logging_level=logging.INFO):
@@ -108,8 +190,15 @@ class mooriaMainWindow(QtWidgets.QMainWindow):
 def main():
     app = QtWidgets.QApplication(sys.argv)
     window = mooriaMainWindow()
-    w = 1000
-    h = 600
+
+    screen = app.primaryScreen()
+    print('Screen: %s' % screen.name())
+    size = screen.size()
+    print('Size: %d x %d' % (size.width(), size.height()))
+    rect = screen.availableGeometry()
+    print('Available: %d x %d' % (rect.width(), rect.height()))
+    w = int(rect.width() * 2/3)
+    h = int(rect.height() * 2/3)
     window.resize(w, h)
     window.show()
     sys.exit(app.exec_())
