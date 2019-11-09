@@ -49,7 +49,7 @@ class mainWidget(QtWidgets.QWidget):
         self.moorings = []
         device_name = list(devices.keys())[0]
         device = devices[device_name]        
-        mooring = self.create_mooring_widget(device_name,device)
+        mooring = self.create_mooring_widget(device_name,device) # device and device_name have to be removed, thats for the moment only
         self.allmoorings = self.create_allmoorings_widget()
         self.loadsave = self.create_loadsave_widget()                
         # Tabs
@@ -122,14 +122,23 @@ class mainWidget(QtWidgets.QWidget):
         """
         """
         mooring = {}
+        mooring['name']       = device_name
         mooring['widget']     = QtWidgets.QWidget()
         mooring['layout']     = QtWidgets.QGridLayout(mooring['widget'])
         mooring['devtable']   = QtWidgets.QTableWidget() # Table with all available devices to choose from
         mooring['devwidget']  = QtWidgets.QWidget() # Special widget to enter parameters for that device
-        mooring['moortable']  = QtWidgets.QTableWidget()
+        # Putting the widget into a scrollWidget
+        mooring['scrollwidget'] = QtWidgets.QScrollArea()
+        mooring['scrollwidget'].setWidgetResizable(True)
+        mooring['scrolllayout'] = QtWidgets.QHBoxLayout(mooring['scrollwidget'])
+        mooring['scrolllayout'].addWidget(mooring['scrollwidget'])
+        mooring['scrollwidget'].setWidget(mooring['devwidget'])
+        #mooring['scrollwidget'].setVerticalScrollBarPolicy(QtCore.Qt.ScrollBarAlwaysOn)
+        mooring['moortable']  = QtWidgets.QTableWidget() # Mooring table, here all devices of the mooring are listed
         splitter = QtWidgets.QSplitter(QtCore.Qt.Horizontal)
         splitter.addWidget(mooring['moortable'])
-        splitter.addWidget(mooring['devwidget'])
+        #splitter.addWidget(mooring['devwidget'])
+        splitter.addWidget(mooring['scrollwidget'])
         splitter.addWidget(mooring['devtable'])                
         mooring['layout'].addWidget(splitter)
         #mooring['layout'].addWidget(mooring['moortable'],0,0)
@@ -161,6 +170,7 @@ class mainWidget(QtWidgets.QWidget):
         return mooring
     
     def update_device_widget(self,mooring,device_name,device):
+        mooring['curdevice'] = {'name':device_name}
         #mooring['devwidget_layout'] = QtWidgets.QVBoxLayout(mooring['devwidget'])
         mooring['devwidget_layout'] = QtWidgets.QFormLayout(mooring['devwidget'])
         lab = QtWidgets.QLabel(device_name)
@@ -183,11 +193,48 @@ class mainWidget(QtWidgets.QWidget):
         layout.addWidget(locref)        
         mooring['devwidget_layout'].addRow(lab,layout)        
         for i,k in enumerate(device.keys()):
-            lab2 = QtWidgets.QLabel(k)
-            mooring['devwidget_layout'].addRow(lab2)
+            if(k.lower() == 'parameter'):
+                lab2 = QtWidgets.QLabel('Parameter')
+                mooring['devwidget_layout'].addRow(lab2)                
+                for par in device[k]:
+                    lab2 = QtWidgets.QLabel(par)
+                    par = QtWidgets.QCheckBox()
+                    mooring['devwidget_layout'].addRow(lab2,par)
+            else:
+                try:
+                    device[k]['options']
+                    HAS_OPTION = True
+                except:
+                    HAS_OPTION = False
 
-        #mooring['devwidget_layout'].insertWidget(1,lab2)
-        #mooring['devwidget_layout'].addStretch()
+                print(device[k],HAS_OPTION)
+                if(HAS_OPTION):
+                    optcombo = QtWidgets.QComboBox()
+                    for op in device[k]['options']:
+                        optcombo.addItem(str(op))
+
+                    lab2 = QtWidgets.QLabel(k)                        
+                    mooring['devwidget_layout'].addRow(lab2,optcombo)
+                else:
+                    lab2 = QtWidgets.QLabel(k)
+                    lineed = QtWidgets.QLineEdit(str(device[k]))
+                    mooring['devwidget_layout'].addRow(lab2,lineed)                    
+
+        mooring['add']    = QtWidgets.QPushButton('Add to mooring')
+        mooring['add'].mooring = mooring # This is a self reference to get the mooring by looking at the sender
+        mooring['devwidget_layout'].addWidget(mooring['add'])                            
+        mooring['add'].clicked.connect(self.add_device_to_mooring)
+
+    def add_device_to_mooring(self):
+        print('Add')
+        mooring = self.sender().mooring
+        print(self.sender().mooring['name'])
+        table = mooring['moortable']
+        table.insertRow(0)
+        item = QtWidgets.QTableWidgetItem( mooring['curdevice']['name'] )
+        table.setItem(0,1,item)
+        pass
+
 
     def create_mooring_dict(self):
         """Function that creates from all available information a dictionary

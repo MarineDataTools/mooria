@@ -1,5 +1,5 @@
 Workhorse:
-  parameters:
+  parameter:
     - u
     - v
     - w
@@ -11,12 +11,12 @@ Workhorse:
   sampling_interval: ''
   company: Teledyne RDI
   frequency:
-    - options:
-        - 1200
-        - 600
-        - 300
-        - 150        
+    options:
+      - 1200
+      - 600
+      - 300
+      - 150        
   orientation:
-    - options:
-        - 'up'
-        - 'down'
+    options:
+      - 'up'
+      - 'down'
