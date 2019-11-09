@@ -5,10 +5,17 @@ Workhorse:
     - w
     - p
   beam_angle: 20
+  blanking_distance: ''  
   range: ''
   bottom_track_range: ''
-  sampling_frequency: ''
+  sampling_interval: ''
   company: Teledyne RDI
+  frequency:
+    - options:
+        - 1200
+        - 600
+        - 300
+        - 150        
   orientation:
     - options:
         - 'up'
