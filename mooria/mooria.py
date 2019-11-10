@@ -121,7 +121,8 @@ class mainWidget(QtWidgets.QWidget):
     def create_mooring_widget(self, device_name,device):
         """
         """
-        mooring = {}
+        mooring                 = {}
+        mooring['devices']      = []        
         mooring['name']         = device_name
         mooring['widget']       = QtWidgets.QWidget()
         mooring['layout']       = QtWidgets.QGridLayout(mooring['widget'])
@@ -158,9 +159,11 @@ class mainWidget(QtWidgets.QWidget):
             # Add the device dictionary to the item, easy for referencing later
             item.device_dict = devices[dev]
             item.device_name = dev
+            item.device = self.create_device_widget(mooring, item.device_name, item.device_dict)            
             table.insertRow(row)
             table.setItem(row,0,item)
-            
+
+
         table.resizeColumnsToContents()
 
         # Create a blank mooring table
@@ -170,10 +173,9 @@ class mainWidget(QtWidgets.QWidget):
         table.setHorizontalHeaderLabels(['Depth','Device'])
         table.resizeColumnsToContents()        
 
-        mooring['devices'] = []        
-        # Adding a test device
-        device = self.create_device_widget(mooring, device_name,device)
-        self.update_device_widget(mooring,device)
+
+        # Adding a test device        
+        self.update_device_widget(mooring, item.device)
         return mooring
 
     def update_device_widget(self,mooring,device_new):
