@@ -126,13 +126,14 @@ class mainWidget(QtWidgets.QWidget):
         mooring['widget']       = QtWidgets.QWidget()
         mooring['layout']       = QtWidgets.QGridLayout(mooring['widget'])
         mooring['devtable']     = QtWidgets.QTableWidget() # Table with all available devices to choose from
-        mooring['devwidget']    = QtWidgets.QWidget() # Special widget to enter parameters for that device
+        mooring['devtable'].cellClicked.connect(self._devtable_cell_was_clicked)
+        mooring['devwidget']    = QtWidgets.QWidget() # Special widget to enter parameters for that device, this is a dummy
         # Putting the widget into a scrollWidget
         mooring['scrollwidget'] = QtWidgets.QScrollArea()
         mooring['scrollwidget'].setWidgetResizable(True)
         mooring['scrolllayout'] = QtWidgets.QHBoxLayout(mooring['scrollwidget'])
         mooring['scrolllayout'].addWidget(mooring['scrollwidget'])
-        mooring['scrollwidget'].setWidget(mooring['devwidget'])
+        mooring['scrollwidget'].setWidget(mooring['devwidget'])        
         #mooring['scrollwidget'].setVerticalScrollBarPolicy(QtCore.Qt.ScrollBarAlwaysOn)
         mooring['moortable']    = QtWidgets.QTableWidget() # Mooring table, here all devices of the mooring are listed
         splitter = QtWidgets.QSplitter(QtCore.Qt.Horizontal)
@@ -147,12 +148,16 @@ class mainWidget(QtWidgets.QWidget):
         #mooring['layout'].addWidget(mooring['devtable'],0,2)
         
         # Fill the devices table
+        mooring['devtable'].mooring = mooring # Self reference for easy use later
         table = mooring['devtable']
         table.setColumnCount(1)
         table.setHorizontalHeaderLabels(['Name'])
         nrows = len(devices)
         for row,dev in enumerate(devices):
-            item = QtWidgets.QTableWidgetItem( dev )            
+            item = QtWidgets.QTableWidgetItem( dev )
+            # Add the device dictionary to the item, easy for referencing later
+            item.device_dict = devices[dev]
+            item.device_name = dev
             table.insertRow(row)
             table.setItem(row,0,item)
             
@@ -174,16 +179,16 @@ class mainWidget(QtWidgets.QWidget):
     def update_device_widget(self,mooring,device_new):
         """ updates the device widget with a new one
         """
-        mooring['scrolllayout'].removeWidget(mooring['devwidget'])
-        mooring['devwidget'] = device_new['widget']
+        mooring['devwidget'].hide()
+        mooring['devwidget'] = device_new['widget']        
         w = mooring['widget'].frameGeometry().width()
         h = mooring['widget'].frameGeometry().height()
         splitter_width = int(w/3)
-        mooring['scrolllayout'].addWidget(mooring['devwidget'])
+        ## Putting the widget into a scrollWidget
+        mooring['scrollwidget'].takeWidget()        
+        mooring['scrollwidget'].setWidget(mooring['devwidget'])
+        mooring['devwidget'].show()
         mooring['splitter'].setSizes([splitter_width, splitter_width,splitter_width])
-        #sizes = mooring['splitter'].sizes()
-        #print(sizes)        
-        #mooring['splitter'].setRubberBand(100)
     
     def create_device_widget(self,mooring,device_name,device_dict):
         """  Creates a device with all necessary widgets into the mooring dict
@@ -346,6 +351,8 @@ class mainWidget(QtWidgets.QWidget):
         pass
 
     def _allmoorings_cell_changed(self,row,column):
+        """ 
+        """
         print(row,column)
         table = self.allmoorings['table']
         lab = self.allmoorings['header_labels'][column] # Get the label
@@ -389,6 +396,31 @@ class mainWidget(QtWidgets.QWidget):
     def _resize_to_fit(self):
         table = self.allmoorings['table']        
         table.resizeColumnsToContents()
+
+    def _devtable_cell_was_clicked(self, row, column):
+        """ Function for the table displaying all devices
+        """
+        print("Row %d and Column %d was clicked" % (row, column))
+        print(self.sender())
+        table = self.sender()
+        item = table.item(row, column)
+        device_dict = item.device_dict
+        device_name = item.device_name
+        mooring = table.mooring
+        print(item.text())
+        print(item.device_dict)
+        try:
+            device = item.device # can be a device dict or None
+        except:
+            device = None
+
+
+        if device == None:
+            device = self.create_device_widget(mooring,device_name,device_dict)
+            item.device = device
+            table.setItem(row,column,item)
+            
+        self.update_device_widget(mooring,device)        
 
     def load(self):
         data = self.create_mooring_dict()        
