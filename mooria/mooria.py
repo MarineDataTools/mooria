@@ -49,8 +49,8 @@ class mainWidget(QtWidgets.QWidget):
         self.moorings = []
         device_name = list(devices.keys())[0]
         device = devices[device_name]        
-        mooring = self.create_mooring_widget(device_name,device) # device and device_name have to be removed, thats for the moment only
-        self.moorings.append(mooring)        
+        mooring = self.create_mooring_widget('Test') # device and device_name have to be removed, thats for the moment only
+        self.moorings.append(mooring) 
         
         self.allmoorings = self.create_allmoorings_widget()
         self.loadsave = self.create_loadsave_widget()                
@@ -72,9 +72,12 @@ class mainWidget(QtWidgets.QWidget):
         mooring['save'].clicked.connect(self.save)
         mooring['csv']    = QtWidgets.QPushButton('Export csv')
         mooring['csv'].clicked.connect(self.save_csv)
+        mooring['geojson']    = QtWidgets.QPushButton('Export as geojson')
+        mooring['geojson'].clicked.connect(self.save_geojson)        
         mooring['layout'].addWidget(mooring['load'])
         mooring['layout'].addWidget(mooring['save'])
         mooring['layout'].addWidget(mooring['csv'])
+        mooring['layout'].addWidget(mooring['geojson'])        
         mooring['layout'].addStretch()
         return mooring
     def create_allmoorings_widget(self):
@@ -102,7 +105,7 @@ class mainWidget(QtWidgets.QWidget):
         table = mooring['table']
         mooring['headers'] = {}
         mooring['headers']['Name'] = 0
-        mooring['headers']['Long term mooring name'] = 1 # If the mooring is part of a sequential series of deployments
+        mooring['headers']['Long term series'] = 1 # If the mooring is part of a sequential series of deployments
         mooring['headers']['Depth']     = 2        
         mooring['headers']['Deployed']  = 3
         mooring['headers']['Recovered'] = 4
@@ -118,12 +121,12 @@ class mainWidget(QtWidgets.QWidget):
 
         return mooring
 
-    def create_mooring_widget(self, device_name,device):
+    def create_mooring_widget(self, mooring_name):
         """
         """
         mooring                 = {}
         mooring['devices']      = []        
-        mooring['name']         = device_name
+        mooring['name']         = mooring_name
         mooring['widget']       = QtWidgets.QWidget()
         mooring['layout']       = QtWidgets.QGridLayout(mooring['widget'])
         mooring['devtable']     = QtWidgets.QTableWidget() # Table with all available devices to choose from
@@ -287,15 +290,15 @@ class mainWidget(QtWidgets.QWidget):
             except:
                 mooring['depth'] = ''                
             try:
-                mooring['longtermname'] = table.item(i,self.allmoorings['headers']['Long term mooring name']).text()
+                mooring['longtermseries'] = table.item(i,self.allmoorings['headers']['Long term series']).text()
             except:
-                mooring['longtermname'] = ''                
+                mooring['longtermseries'] = ''                
             try:                
-                mooring['lon'] = table.item(i,self.allmoorings['headers']['Longitude']).text()
+                mooring['lon'] = float(table.item(i,self.allmoorings['headers']['Longitude']).text())
             except:
                 mooring['lon'] = ''
             try:                
-                mooring['lat'] = table.item(i,self.allmoorings['headers']['Latitude']).text()
+                mooring['lat'] = float(table.item(i,self.allmoorings['headers']['Latitude']).text())
             except:
                 mooring['lat'] = ''                
             try:                
@@ -310,6 +313,10 @@ class mainWidget(QtWidgets.QWidget):
                 mooring['comment'] = table.item(i,self.allmoorings['headers']['Comment']).text()
             except:
                 mooring['comment'] = ''
+            try:                
+                mooring['campaign'] = table.item(i,self.allmoorings['headers']['Campaign']).text()
+            except:
+                mooring['campaign'] = ''
                 
             data['moorings'].append(mooring)
 
@@ -323,33 +330,44 @@ class mainWidget(QtWidgets.QWidget):
             table.insertRow(0)
             item = QtWidgets.QTableWidgetItem( mooring['name'] )            
             table.setItem(0,self.allmoorings['headers']['Name'],item)
-            item = QtWidgets.QTableWidgetItem( mooring['longtermname'] )            
-            table.setItem(0,self.allmoorings['headers']['Long term mooring name'],item)
+            item = QtWidgets.QTableWidgetItem( mooring['longtermseries'] )            
+            table.setItem(0,self.allmoorings['headers']['Long term series'],item)
             item = QtWidgets.QTableWidgetItem( mooring['depth'] )            
             table.setItem(0,self.allmoorings['headers']['Depth'],item)                        
             item = QtWidgets.QTableWidgetItem( mooring['deployed'] )            
             table.setItem(0,self.allmoorings['headers']['Deployed'],item)
             item = QtWidgets.QTableWidgetItem( mooring['recovered'] )            
             table.setItem(0,self.allmoorings['headers']['Recovered'],item)
-            item = QtWidgets.QTableWidgetItem( mooring['lon'] )            
+            item = QtWidgets.QTableWidgetItem( '{:3.5f}'.format(mooring['lon']) )
+
             table.setItem(0,self.allmoorings['headers']['Longitude'],item)
-            item = QtWidgets.QTableWidgetItem( mooring['lat'] )            
+            item = QtWidgets.QTableWidgetItem( '{:3.5f}'.format(mooring['lat']) )
             table.setItem(0,self.allmoorings['headers']['Latitude'],item)            
             item = QtWidgets.QTableWidgetItem( mooring['comment'] )            
             table.setItem(0,self.allmoorings['headers']['Comment'],item)
-            pass
+            try:
+                item = QtWidgets.QTableWidgetItem( mooring['campaign'] )            
+                table.setItem(0,self.allmoorings['headers']['Campaign'],item)
+            except:
+                pass
 
     def add_mooring(self):
-        table = self.allmoorings['table']        
-        table.insertRow(0)
-        print('add')
+        table = self.allmoorings['table']
+        nrows = table.rowCount()
+        table.insertRow(nrows)
 
     def rem_mooring(self):
         print('rem')        
         pass
 
     def edit_mooring(self):
-        print('edit')        
+        print('edit')
+        table = self.allmoorings['table']        
+        for item in table.selectedItems():
+            print(item.row(), item.column(), item.text())
+            
+        #mooring = self.create_mooring_widget('Test') # device and device_name have to be removed, thats for the moment only
+        #self.moorings.append(mooring)        
         pass
 
     def _allmoorings_cell_changed(self,row,column):
@@ -359,36 +377,72 @@ class mainWidget(QtWidgets.QWidget):
         table = self.allmoorings['table']
         lab = self.allmoorings['header_labels'][column] # Get the label
         item = table.item(row,column)
-        print(item.text())
         # Check if the input is correct
         if(('longitude' in lab.lower()) or ('latitude' in lab.lower())):
-            lonbad = 'dec. deg.'
+            print('Position')
+            lonbad = ''
+            pos = item.text()
+            if(item.text() == lonbad):
+                return
+            
+            sign = None
+            # Check if different format and convert to float
+            if(('E' in pos) or ('N' in pos)):
+                sign = 1
+                pos = pos.replace('E',' ')
+                pos = pos.replace('N',' ')                
+            if(('W' in pos) or ('S' in pos)):
+                sign = -1
+                pos = pos.replace('W',' ')
+                pos = pos.replace('S',' ')
+
+            if(sign is not None): # If we have a decimal degree format
+                try:
+                    pos = sign  * (float(pos.split(' ')[0]) + float(pos.split(' ')[1])/60)
+                except Exception as e:
+                    pass
+
             try:
-                lon = float(item.text())
+                lon = float(pos)
+                item_new = QtWidgets.QTableWidgetItem( '{:3.5f}'.format(lon) )                
             except:
                 lon = lonbad
+                item_new = QtWidgets.QTableWidgetItem( lonbad )
+                msg = QtWidgets.QMessageBox()
+                msg.setIcon(QtWidgets.QMessageBox.Warning)
+                msg.setInformativeText('Enter position in decimal degrees e.g. 20.2, -20.2 or in degree and decimal minutes, e.g. 57N32.3, 40S32.0')
+                retval = msg.exec_()
 
-            item_new = QtWidgets.QTableWidgetItem( str(lon) )
+
             # Check if we have already a change, otherwise it becomes recursive
-            if(lonbad in item.text()):
+            if(lonbad == item.text()):
                 pass
-            elif(str(lon) == item.text()):
+            elif('{:3.5f}'.format(lon) == item.text()):
                 pass
             else:
                 table.setItem(row,column,item_new)
 
         if(('deployed' in lab.lower()) or ('recovered' in lab.lower())):
-            dbad = 'yyyy-mm-dd HH:MM:SS'
-            try:
-                date = datetime.datetime.strptime(item.text(),'%Y-%m-%d %H:%M:%S')
-                item_new = QtWidgets.QTableWidgetItem( date.strftime('%Y-%m-%d %H:%M:%S'))
-            except Exception as e:
-                print(e)
-                date = dbad
-                item_new = QtWidgets.QTableWidgetItem( date)
+            dbad = ''
+            if(len(item.text()) > 0):
+                print('Date')
+                try:
+                    try:
+                        date = datetime.datetime.strptime(item.text(),'%Y-%m-%d %H:%M:%S')
+                    except:
+                        date = datetime.datetime.strptime(item.text(),'%Y-%m-%d %H:%M')
+
+                    item_new = QtWidgets.QTableWidgetItem( date.strftime('%Y-%m-%d %H:%M:%S'))
+                except Exception as e:
+                    date = dbad
+                    msg = QtWidgets.QMessageBox()
+                    msg.setIcon(QtWidgets.QMessageBox.Warning)
+                    msg.setInformativeText('Enter date in format yyyy-mm-dd HH:MM(:SS)')
+                    retval = msg.exec_()                
+                    item_new = QtWidgets.QTableWidgetItem( date)
 
             # Check if we have already a change, otherwise it becomes recursive
-            if(dbad in item.text()):
+            if(dbad == item.text()):
                 pass
             elif(str(date) == item.text()):
                 pass
@@ -425,17 +479,120 @@ class mainWidget(QtWidgets.QWidget):
         self.update_device_widget(mooring,device)        
 
     def load(self):
-        data = self.create_mooring_dict()        
-        self.load_mooring_dict(data)
+        filename,extension  = QtWidgets.QFileDialog.getOpenFileName(self,"Choose file for summary","","All Files (*)")
+
+        # Opening the yaml file
+        try:
+            stream = open(filename, 'r')
+            data_yaml = yaml.safe_load(stream)
+        except Exception as e:
+            msg = QtWidgets.QMessageBox()
+            msg.setIcon(QtWidgets.QMessageBox.Warning)
+            msg.setInformativeText('No valid or not existing yaml file (' + str(e) + ')')
+            retval = msg.exec_()            
+            return
+        
+        self.load_mooring_dict(data_yaml)
         print('Load')
 
     def save(self):
         print('Save')
         data = self.create_mooring_dict()
-        print(data)
+        filename,extension  = QtWidgets.QFileDialog.getSaveFileName(self,"Choose file for summary","","All Files (*)")
+        self.save_yaml_summary(data,filename)
 
-    def save_csv(self):
-        print('Save csv')                
+    def save_yaml_summary(self,summary,filename):
+        """ Save a yaml summary
+        """
+        if ('.yaml' not in filename):
+            filename += '.yaml'
+        
+        print('Create yaml summary in file:' + filename)
+        with open(filename, 'w') as outfile:
+            yaml.dump(summary, outfile, default_flow_style=False)
+
+    def save_geojson(self):
+        data = self.create_mooring_dict()
+        filename,extension  = QtWidgets.QFileDialog.getSaveFileName(self,"Choose file for summary","","All Files (*)")
+        self.save_geojson_summary(data,filename)
+
+    def save_geojson_summary(self,summary,filename):
+        """ Save a geojson summary
+        """
+        if ('.geojson' not in filename):
+            filename += '.geojson'
+
+        print('Create geojson summary in file:' + filename)
+        crs = { "type": "name", "properties": { "name": "urn:ogc:def:crs:OGC:1.3:CRS84" } } # Reference coordinate system
+
+        #['date','lon','lat','station','campaign','file','comment']
+        if True:
+            try:
+                properties = summary['moorings'][0].keys()
+            except:
+                properties = []
+
+
+        if(len(properties) > 0):
+            features = []
+            for i,d in enumerate(summary['moorings']):
+                csv_line = ''
+                try:
+                    lon = float(d['lon'])
+                    lat = float(d['lat'])
+                except Exception as e:
+                    print('No valid positions in mooring:' + d['name'] +  ' will not export it.' )
+                    continue
+                p = geojson.Point((lon, lat))
+                prop = {}
+                for o in properties:
+                    prop[o] = d[o]
+
+                feature = geojson.Feature(geometry=p, properties=prop)
+                features.append(feature)
+
+            featurecol = geojson.FeatureCollection(features,name='moorings',crs=crs)
+            with open(filename, 'w') as outfile:
+                geojson.dump(featurecol, outfile)
+
+            outfile.close()
+
+
+    def save_csv(self,delimiter=';'):
+        filename,extension  = QtWidgets.QFileDialog.getSaveFileName(self,"Choose file for csv summary","","All Files (*)")
+        self.create_csv(filename)
+        
+    def create_csv(self,filename,delimiter=';',header=None):
+        if(header == None):
+            header = ['Name','Depth','Longitude','Latitude','Deployed','Recovered']
+
+        if ('.csv' not in filename):
+            filename += '.csv'
+
+        print('Opening',filename)
+        f = open(filename,'w')
+        table = self.allmoorings['table']        
+        nrows = table.rowCount()
+        ncols = table.columnCount()
+        header = ['Name','Depth','Longitude','Latitude','Deployed','Recovered']
+        # Write the header
+        lstr = ''        
+        for head in header:
+            lstr += head + delimiter
+
+        lstr = lstr[:lstr.rfind(delimiter)] + '\n' # Get rid of the last delimiter
+        f.write(lstr)        
+        # Write the data
+        for i in range(nrows):
+            lstr = ''
+            for head in header:
+                lstr += table.item(i,self.allmoorings['headers'][head]).text() + delimiter
+                
+            lstr = lstr[:lstr.rfind(delimiter)] + '\n' # Get rid of the last delimiter
+            f.write(lstr)
+
+        f.close()
+
 
 
         
