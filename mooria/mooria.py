@@ -8,6 +8,7 @@ import yaml
 import pkg_resources
 import datetime
 import geojson
+import numpy as np
 
 # Get the version
 version_file = pkg_resources.resource_filename('mooria','VERSION')
@@ -127,10 +128,11 @@ class mainWidget(QtWidgets.QWidget):
 
         return mooring
 
-    def create_mooring_widget(self, mooring_name,depth = ''):
+    def create_mooring_widget(self, mooring_name,depth = 0):
         """
         """
         mooring                 = {}
+        mooring['depth']        = depth
         mooring['devices']      = []        
         mooring['name']         = mooring_name
         mooring['widget']       = QtWidgets.QWidget()
@@ -147,7 +149,9 @@ class mainWidget(QtWidgets.QWidget):
         #mooring['scrollwidget'].setVerticalScrollBarPolicy(QtCore.Qt.ScrollBarAlwaysOn)
         mooring['moortable']    = QtWidgets.QTableWidget() # Mooring table, here all devices of the mooring are listed
         mooring['moortable'].cellClicked.connect(self._table_cell_was_clicked)        
-        mooring['moortable'].mooring = mooring # Self reference for easy use later              
+        mooring['moortable'].mooring = mooring # Self reference for easy use later
+        mooring['moortable'].setEditTriggers(QtWidgets.QAbstractItemView.NoEditTriggers) # Not editable
+        
         splitter = QtWidgets.QSplitter(QtCore.Qt.Horizontal)
         splitter.addWidget(mooring['moortable'])
         #splitter.addWidget(mooring['devwidget'])
@@ -181,23 +185,23 @@ class mainWidget(QtWidgets.QWidget):
 
         # Create a blank mooring table
         table = mooring['moortable']
-        mooring['moortable_header'] = ['Depth','Device','Serial Nr.','Parameter']
-        table.setColumnCount(len(mooring['moortable_header']))
+        mooring['moortable_header_labels'] = ['Depth','MAB','Device','Serial Nr.','Parameter']
+        mooring['moortable_headers']= {}
+        for i in range(len(mooring['moortable_header_labels'])):
+            mooring['moortable_headers'][mooring['moortable_header_labels'][i]] = i
+            
+        table.setColumnCount(len(mooring['moortable_header_labels']))
         # Create the seafloor (bottom)
         item = QtWidgets.QTableWidgetItem( 'bottom' )
-        try:
-            dstr = '{:3.3f}'.format(depth)
-        except:
-            dstr = str(depth)
-            
+        dstr = '{:3.3f}'.format(depth)
         item_depth = QtWidgets.QTableWidgetItem( dstr )
+        item_mab = QtWidgets.QTableWidgetItem( '{:3.3f}'.format(0) )        
         table.setRowCount(1)
-        table.setItem(0,1,item)
-        table.setItem(0,0,item_depth)        
-        table.setHorizontalHeaderLabels(mooring['moortable_header'])
+        table.setItem(0,mooring['moortable_headers']['Device'],item)
+        table.setItem(0,mooring['moortable_headers']['Depth'],item_depth)
+        table.setItem(0,mooring['moortable_headers']['MAB'],item_mab)        
+        table.setHorizontalHeaderLabels(mooring['moortable_header_labels'])
         table.resizeColumnsToContents()        
-
-
 
         return mooring
 
@@ -221,7 +225,7 @@ class mainWidget(QtWidgets.QWidget):
         device = {}
         device['widget']    = QtWidgets.QWidget() # Special widget to enter parameters for that device        
         device['name'] = device_name
-        device['device_dict'] = device_dict
+        device['device_dict'] = device_dict.copy()
         device['device_widgets'] = {} # A dictionary with the same form as device_dict but with the responsible widgets in it
         mooring['devices'].append(device)        
         device['widget_layout'] = QtWidgets.QFormLayout(device['widget'])
@@ -241,14 +245,14 @@ class mainWidget(QtWidgets.QWidget):
         lab = QtWidgets.QLabel('Location')
         loced = QtWidgets.QLineEdit()
         locref = QtWidgets.QComboBox()
-        locref.addItems(['Depth','Above bottom','Custom'])
+        locref.addItems(['Depth','Above bottom'])
         layout = QtWidgets.QHBoxLayout()
-        if('depth' in device['device_dict']):
-            sered.setText(str(device['device_dict']['depth']))
+        if('location' in device['device_dict']):
+            sered.setText(str(device['device_dict']['location']))
         else:
-            device['device_dict']['depth'] = ''
-            device['device_widgets']['depth'] = [loced,locref] # A list with the relevant widgets
-            
+            device['device_dict']['location'] = ''
+
+        device['device_widgets']['location'] = [loced,locref] # A list with the relevant widgets            
         layout.addWidget(loced)
         layout.addWidget(locref)        
         device['widget_layout'].addRow(lab,layout)
@@ -306,11 +310,10 @@ class mainWidget(QtWidgets.QWidget):
         device  = self.sender().device
         # Check if the device is referenced in the devtable, if so replace it with None
         dtable = mooring['moortable']
-        ind_dev = 1
         for i in range(dtable.rowCount()):
             print(i)
             try:
-                dev = dtable.item(i,ind_dev).device
+                dev = dtable.item(i,mooring['moortable_headers']['Device']).device
             except:
                 dev = None
 
@@ -325,16 +328,57 @@ class mainWidget(QtWidgets.QWidget):
         # The mooring and device are references for convenience in create_device_widget
         mooring      = self.sender().mooring
         device       = self.sender().device
-        device_blank = self.create_device_widget(mooring,device['name'],device['device_dict']) # Create a blank device to replace the original one
+        device_blank = self.create_device_widget(mooring,device['name'],device['device_dict'].copy()) # Create a blank device to replace the original one
         #device_orig = self.sender().device        
         #device_dict = self.create_dict_from_device(device_orig)
         #device      = self.create_device_widget(mooring,device_dict['name'],device_dict)
         print(self.sender().mooring['name'])
         table = mooring['moortable']
-        table.insertRow(0)
+        # Calculate depth/MAB of all devices listed
+        rows = table.rowCount()
+        depth = []
+        MAB = []
+        for i in range(rows):
+            depthitem = table.item(i,mooring['moortable_headers']['Depth'])
+            mabitem = table.item(i,mooring['moortable_headers']['MAB'])
+            try:
+                depth.append(float(depthitem.text()))
+            except Exception as e:
+                print(e)
+                depth.append(np.NaN)
+
+            try:
+                MAB.append(float(mabitem.text()))
+            except:
+                MAB.append(np.NaN)                
+
+
+        ## MAB = mooring['depth'] - depth
+        ## depth = mooring['depth'] - MAB
+        #for i in range(len
+        print('MAB',MAB)
+        print('Depth',depth)
+        row = 0
+        table.insertRow(row)
+        print('Depth new device',device['device_widgets']['location'][0].text())
+        print('Depth new device',device['device_widgets']['location'][1].currentText())
+        refsystem = device['device_widgets']['location'][1].currentText()
+        if('depth' in refsystem.lower()):
+            item = QtWidgets.QTableWidgetItem( device['device_widgets']['location'][0].text() )
+            table.setItem(row,mooring['moortable_headers']['Depth'],item)
+        else:
+            item = QtWidgets.QTableWidgetItem( device['device_widgets']['location'][0].text() )
+            table.setItem(row,mooring['moortable_headers']['MAB'],item)
+            
         item = QtWidgets.QTableWidgetItem( device['name'] )
         item.device = device
-        table.setItem(0,1,item)
+        table.setItem(row,mooring['moortable_headers']['Device'],item)
+
+        # Change the add button
+        device['add'].setText('Remove from mooring')
+        device['add'].clicked.disconnect(self.add_device_to_mooring)
+        device['add'].clicked.connect(self.rem_device_to_mooring)
+
         # Check if the device is referenced in the devtable, if so replace it with None
         dtable = mooring['devtable']
         for i in range(dtable.rowCount()):
@@ -348,9 +392,16 @@ class mainWidget(QtWidgets.QWidget):
             if(dev == device):
                 print('Found device! Will replace it')
                 item = dtable.takeItem(i,0)
-                item.device = None
+                item.device = device_blank
                 dtable.setItem(i,0,item)
-                self.update_device_widget(mooring, device_blank)                
+                self.update_device_widget(mooring, device_blank)
+
+
+    def calc_MAB_depth_of_mooring(self,mooring):
+        """ Calculates MAB (Meters above bottom) and depth vectors of the
+        given devices and returns a dictionary containing both
+
+        """
 
     def create_mooring_dict(self):
         """Function that creates from all available information a dictionary
@@ -521,10 +572,10 @@ class mainWidget(QtWidgets.QWidget):
                     
                 if(HAS_MOORING): # Enter the new depth
                     rowcnt  = item.mooring['moortable'].rowCount()
-                    botitem = item.mooring['moortable'].takeItem(rowcnt,0)
+                    botitem = item.mooring['moortable'].takeItem(rowcnt,mooring['moortable_headers']['Depth'])
                     botitem_new = QtWidgets.QTableWidgetItem( '{:3.3f}'.format(depth) )
                     print('Setting depth',rowcnt)
-                    item.mooring['moortable'].setItem(rowcnt-1,0,botitem_new)
+                    item.mooring['moortable'].setItem(rowcnt-1,mooring['moortable_headers']['Depth'],botitem_new)
                     
             else:
                 table.setItem(row,column,item_new)            
@@ -616,19 +667,16 @@ class mainWidget(QtWidgets.QWidget):
         table = self.sender()
         item = table.item(row, column)
         mooring = table.mooring
-        DEVTABLE=False        
+        DEVTABLE=False
+        if(item == None):
+            return
         if(table == mooring['moortable']):
-            if(column == 1): # The device name column, here the items have all the information
+            if(column == mooring['moortable_headers']['Device']): # The device name column, here the items have all the information
                 print('moortable')
+                device = item.device
                 if(item.text() == 'bottom'): # Clicked at the bottom cell
                     return                
-                device = item.device # Must be a device dict
-                device['add'].setText('Remove from mooring')
-                try:
-                    device['add'].clicked.disconnect(self.add_device_to_mooring)
-                    device['add'].clicked.connect(self.rem_device_to_mooring)
-                except:
-                    pass
+
             else:
                 return
                     
