@@ -127,7 +127,7 @@ class mainWidget(QtWidgets.QWidget):
 
         return mooring
 
-    def create_mooring_widget(self, mooring_name):
+    def create_mooring_widget(self, mooring_name,depth = ''):
         """
         """
         mooring                 = {}
@@ -185,8 +185,15 @@ class mainWidget(QtWidgets.QWidget):
         table.setColumnCount(len(mooring['moortable_header']))
         # Create the seafloor (bottom)
         item = QtWidgets.QTableWidgetItem( 'bottom' )
+        try:
+            dstr = '{:3.3f}'.format(depth)
+        except:
+            dstr = str(depth)
+            
+        item_depth = QtWidgets.QTableWidgetItem( dstr )
         table.setRowCount(1)
         table.setItem(0,1,item)
+        table.setItem(0,0,item_depth)        
         table.setHorizontalHeaderLabels(mooring['moortable_header'])
         table.resizeColumnsToContents()        
 
@@ -447,13 +454,23 @@ class mainWidget(QtWidgets.QWidget):
                 tmp = None
 
             if(tmp == None):
-                #print(item.row(), item.column(), item.text())
-                #print(row,self.allmoorings['headers']['Name'])
+                if(table.item(row,self.allmoorings['headers']['Name']) == None):
+                    msg = QtWidgets.QMessageBox()
+                    msg.setIcon(QtWidgets.QMessageBox.Warning)
+                    msg.setInformativeText('Name the mooring first')
+                    retval = msg.exec_()
+                    return
                 name = table.item(row,self.allmoorings['headers']['Name']).text()
-                mooring = self.create_mooring_widget(name) # device and device_name have to be removed, thats for the moment only
+                try:
+                    depth = float(table.item(row,self.allmoorings['headers']['Depth']).text())
+                except Exception as e:
+                    print('Depth edit',e)
+                    depth = ''
+                    
+                mooring = self.create_mooring_widget(name,depth=depth) 
                 self.tabs.addTab(mooring['widget'],name)
                 self.moorings.append(mooring)
-                item = table.item(row,self.allmoorings['headers']['Name'])
+                item = table.takeItem(row,self.allmoorings['headers']['Name'])
                 item.mooring = mooring
                 table.setItem(row,self.allmoorings['headers']['Name'],item)
                 
@@ -492,8 +509,23 @@ class mainWidget(QtWidgets.QWidget):
                 pass
             elif(depth == depthbad):
                 table.setItem(row,column,item_new)
-            elif('{:3.3f}'.format(depth) == item.text()):
-                pass
+            elif('{:3.3f}'.format(depth) == item.text()): # If everything is fine, update the mooring, if existing
+                item = table.item(row,self.allmoorings['headers']['Name'])
+                HAS_MOORING = False
+                try:
+                    item.mooring
+                    print('Has mooring')
+                    HAS_MOORING=True
+                except Exception as e:
+                    print('No mooring',e)
+                    
+                if(HAS_MOORING): # Enter the new depth
+                    rowcnt  = item.mooring['moortable'].rowCount()
+                    botitem = item.mooring['moortable'].takeItem(rowcnt,0)
+                    botitem_new = QtWidgets.QTableWidgetItem( '{:3.3f}'.format(depth) )
+                    print('Setting depth',rowcnt)
+                    item.mooring['moortable'].setItem(rowcnt-1,0,botitem_new)
+                    
             else:
                 table.setItem(row,column,item_new)            
             
