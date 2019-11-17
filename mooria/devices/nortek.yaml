@@ -1,0 +1,33 @@
+Vector:
+  parameter:
+    - u
+    - v
+    - w
+    - T
+    - p
+
+  sampling_interval: ''    
+  company: Nortek, Norway
+
+
+Aquadopp:
+  parameter:
+    - u
+    - v
+    - w
+    - p
+#  beam_angle: 20
+  blanking_distance: ''  
+  range: ''
+  bottom_track_range: ''
+  sampling_interval: ''
+  company: Nortek, Norway
+  frequency:
+    options:
+      - 2000      
+      - 1000
+  orientation:
+    options:
+      - 'up'
+      - 'down'  
+

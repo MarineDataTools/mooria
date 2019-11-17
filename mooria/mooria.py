@@ -57,7 +57,6 @@ class QCustomTableWidgetItem (QtWidgets.QTableWidgetItem):
         else:
             return QtWidgets.QTableWidgetItem.__lt__(self, other)
 
-
 class mainWidget(QtWidgets.QWidget):
     def __init__(self,logging_level=logging.INFO,within_qgis = False):
         QtWidgets.QWidget.__init__(self)        
@@ -245,6 +244,17 @@ class mainWidget(QtWidgets.QWidget):
         device['widget_layout'] = QtWidgets.QFormLayout(device['widget'])
         lab = QtWidgets.QLabel(device_name)
         device['widget_layout'].addWidget(lab)
+        # Label
+        lab = QtWidgets.QLabel('Label')
+        lab.setToolTip('A custom name or description of the device')  
+        labed = QtWidgets.QLineEdit()
+        if('label' in device['device_dict']):
+            sered.setText(str(device['device_dict']['label']))
+        else:
+            device['device_dict']['label'] = ''
+
+        device['device_widgets']['label'] = labed # A list with the relevant widgets            
+        device['widget_layout'].addRow(lab,labed)        
         # Serial number
         lab = QtWidgets.QLabel('Serial number')
         sered = QtWidgets.QLineEdit()
@@ -270,6 +280,33 @@ class mainWidget(QtWidgets.QWidget):
         layout.addWidget(loced)
         layout.addWidget(locref)        
         device['widget_layout'].addRow(lab,layout)
+
+        # Add raw data files
+        if('raw_data' in device['device_dict']):
+            sered.setText(str(device['device_dict']['raw_data']))
+        else:
+            device['device_dict']['raw_data'] = ''
+
+        lab = QtWidgets.QLabel('Raw data')
+        dataed = QtWidgets.QLineEdit()
+        dataref = QtWidgets.QPushButton('File(s)')
+        layout = QtWidgets.QHBoxLayout()
+        layout.addWidget(dataed)
+        layout.addWidget(dataref)                
+        device['widget_layout'].addRow(lab,layout)
+        # Add processed data files
+        if('processed_data' in device['device_dict']):
+            sered.setText(str(device['device_dict']['processed_data']))
+        else:
+            device['device_dict']['processed_data'] = ''
+
+        lab = QtWidgets.QLabel('Processed data')
+        dataed = QtWidgets.QLineEdit()
+        dataref = QtWidgets.QPushButton('File(s)')
+        layout = QtWidgets.QHBoxLayout()
+        layout.addWidget(dataed)
+        layout.addWidget(dataref)                
+        device['widget_layout'].addRow(lab,layout)                
         # All other dicts without special treatment
         for i,k in enumerate(device_dict.keys()):
             if(k.lower() == 'parameter'):
