@@ -1,4 +1,5 @@
 Vector:
+  name: Vector
   parameter:
     - u
     - v
@@ -11,6 +12,7 @@ Vector:
 
 
 Aquadopp:
+  name: Aquadopp
   parameter:
     - u
     - v

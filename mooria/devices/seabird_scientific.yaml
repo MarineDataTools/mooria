@@ -1,4 +1,5 @@
 Microcat:
+  name: Microcat
   parameter:
     - T
     - C
@@ -6,6 +7,7 @@ Microcat:
 
 
 Seacat:
+  name: Seacat
   parameter:
     - T
     - C

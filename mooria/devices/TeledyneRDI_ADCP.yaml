@@ -1,4 +1,5 @@
 Workhorse:
+  name: Workhorse
   parameter:
     - u
     - v

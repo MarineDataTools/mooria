@@ -1,4 +1,5 @@
 miniDOT:
+  name: miniDOT
   parameter:
     - O2
     - T

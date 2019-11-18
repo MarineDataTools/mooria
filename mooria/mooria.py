@@ -276,7 +276,7 @@ class mainWidget(QtWidgets.QWidget):
         else:
             device['device_dict']['location'] = ''
 
-        device['device_widgets']['location'] = [loced,locref] # A list with the relevant widgets            
+        device['device_widgets']['location'] = [loced,locref] # A list with the relevant widgets
         layout.addWidget(loced)
         layout.addWidget(locref)        
         device['widget_layout'].addRow(lab,layout)
@@ -294,6 +294,7 @@ class mainWidget(QtWidgets.QWidget):
         layout.addWidget(dataed)
         layout.addWidget(dataref)                
         device['widget_layout'].addRow(lab,layout)
+        device['device_widgets']['raw_data'] = dataed
         # Add processed data files
         if('processed_data' in device['device_dict']):
             sered.setText(str(device['device_dict']['processed_data']))
@@ -306,7 +307,8 @@ class mainWidget(QtWidgets.QWidget):
         layout = QtWidgets.QHBoxLayout()
         layout.addWidget(dataed)
         layout.addWidget(dataref)                
-        device['widget_layout'].addRow(lab,layout)                
+        device['widget_layout'].addRow(lab,layout)
+        device['device_widgets']['processed_data'] = dataed        
         # All other dicts without special treatment
         for i,k in enumerate(device_dict.keys()):
             if(k.lower() == 'parameter'):
@@ -315,9 +317,11 @@ class mainWidget(QtWidgets.QWidget):
                 device['device_widgets']['parameter'] = {}                
                 for par in device_dict[k]:
                     lab2 = QtWidgets.QLabel(par)
-                    par = QtWidgets.QCheckBox()
-                    device['device_widgets']['parameter'][par] = par 
-                    device['widget_layout'].addRow(lab2,par)
+                    parcheck = QtWidgets.QCheckBox()
+                    parcheck.setCheckState(True)
+                    parcheck.setTristate(False)
+                    device['device_widgets']['parameter'][par] = parcheck 
+                    device['widget_layout'].addRow(lab2,parcheck)
             else:
                 try:
                     device_dict[k]['options']
@@ -356,12 +360,39 @@ class mainWidget(QtWidgets.QWidget):
         return device        
 
     def create_dict_from_device(self,device):
-        """This is a major function, as it collects all the information in the
-        widgets and crates a dictionary out of it, which can be saved
+        """ This function collects all the information in the
+        widgets and creates a dictionary out of it, which can be saved
         or used to create a new device widget
 
         """
-        pass
+        devdict = {}
+        for i,k in enumerate(device['device_dict'].keys()):
+            d = device['device_widgets'][k]
+            #print('D:',d)
+            #print(i,k)
+            if(k == 'parameter'): # Parameter, check the checkboxes
+               devdict['parameter'] = []        
+               for j,kd in enumerate(d.keys()):
+                   if(d[kd].isChecked()):
+                       devdict['parameter'].append(kd)
+
+            elif(isinstance(d,list)):
+                print('List')
+                data = d[0].text()
+                data += ' ' + d[1].currentText() # A Qcombobox
+                devdict[k] = data                
+            else: # a Lineedit
+                data = ''
+                if(isinstance(d,QtWidgets.QComboBox)):
+                    data = d.currentText()
+                elif(isinstance(d,QtWidgets.QLineEdit)):
+                    data = d.text()
+                    
+                devdict[k] = data
+               
+            
+            
+        return devdict
 
     def rem_device_to_mooring(self):
         print('Remove device from mooring')
@@ -494,7 +525,7 @@ class mainWidget(QtWidgets.QWidget):
 
         """
 
-    def create_mooring_dict(self):
+    def create_mooring_dict(self,with_devices=True):
         """Function that creates from all available information a dictionary
 
         """
@@ -504,45 +535,71 @@ class mainWidget(QtWidgets.QWidget):
         nrows = table.rowCount()
         ncols = table.columnCount()
         for i in range(nrows):
-            mooring = {}
+            mooring_dict = {}
             try:
-                mooring['name'] = table.item(i,self.allmoorings['headers']['Name']).text()
+                mooring_dict['name'] = table.item(i,self.allmoorings['headers']['Name']).text()
             except:
-                mooring['name'] = ''
+                mooring_dict['name'] = ''
             try:
-                mooring['depth'] = table.item(i,self.allmoorings['headers']['Depth']).text()
+                mooring_dict['depth'] = table.item(i,self.allmoorings['headers']['Depth']).text()
             except:
-                mooring['depth'] = ''                
+                mooring_dict['depth'] = ''                
             try:
-                mooring['longtermseries'] = table.item(i,self.allmoorings['headers']['Long term series']).text()
+                mooring_dict['longtermseries'] = table.item(i,self.allmoorings['headers']['Long term series']).text()
             except:
-                mooring['longtermseries'] = ''                
+                mooring_dict['longtermseries'] = ''                
             try:                
-                mooring['lon'] = float(table.item(i,self.allmoorings['headers']['Longitude']).text())
+                mooring_dict['lon'] = float(table.item(i,self.allmoorings['headers']['Longitude']).text())
             except:
-                mooring['lon'] = ''
+                mooring_dict['lon'] = ''
             try:                
-                mooring['lat'] = float(table.item(i,self.allmoorings['headers']['Latitude']).text())
+                mooring_dict['lat'] = float(table.item(i,self.allmoorings['headers']['Latitude']).text())
             except:
-                mooring['lat'] = ''                
+                mooring_dict['lat'] = ''                
             try:                
-                mooring['deployed'] = table.item(i,self.allmoorings['headers']['Deployed']).text()
+                mooring_dict['deployed'] = table.item(i,self.allmoorings['headers']['Deployed']).text()
             except:
-                mooring['deployed'] = ''                                
+                mooring_dict['deployed'] = ''                                
             try:                
-                mooring['recovered'] = table.item(i,self.allmoorings['headers']['Recovered']).text()
+                mooring_dict['recovered'] = table.item(i,self.allmoorings['headers']['Recovered']).text()
             except:
-                mooring['recovered'] = ''                                
+                mooring_dict['recovered'] = ''                                
             try:                
-                mooring['comment'] = table.item(i,self.allmoorings['headers']['Comment']).text()
+                mooring_dict['comment'] = table.item(i,self.allmoorings['headers']['Comment']).text()
             except:
-                mooring['comment'] = ''
+                mooring_dict['comment'] = ''
             try:                
-                mooring['campaign'] = table.item(i,self.allmoorings['headers']['Campaign']).text()
+                mooring_dict['campaign'] = table.item(i,self.allmoorings['headers']['Campaign']).text()
             except:
-                mooring['campaign'] = ''
-                
-            data['moorings'].append(mooring)
+                mooring_dict['campaign'] = ''
+
+            # Devices
+            if(with_devices):
+                mooring_dict['devices'] = []
+                try:
+                   mooring = table.item(i,self.allmoorings['headers']['Name']).mooring
+                   HAS_MOORING = True
+                except Exception as e:
+                   HAS_MOORING = False
+                   print('mooring save',e)
+
+                if HAS_MOORING:
+                   print('Has mooring')
+                   dtable = mooring['moortable']
+                   # Loop over all devices and make a dict of them
+                   for i in range(dtable.rowCount()):
+                       try:
+                           dev = dtable.item(i,mooring['moortable_headers']['Device']).device
+                       except Exception as e:
+                           print('Device exception:',str(e))
+                           dev = None
+
+                       if dev is not None: 
+                           devdict = self.create_dict_from_device(dev)
+                           mooring_dict['devices'].append(devdict)
+
+            print(mooring_dict)
+            data['moorings'].append(mooring_dict)
 
         return data
 
@@ -649,7 +706,20 @@ class mainWidget(QtWidgets.QWidget):
         lab = self.allmoorings['header_labels'][column] # Get the label
         item = table.item(row,column)
 
-        # Check if the input is correct
+        # Check if the name has changed and rename the tab as well
+        if(('name' == lab.lower())):
+            for i in range(self.tabs.count()):
+                w = self.tabs.widget(i)
+                try:
+                    item.mooring['widget']
+                    HAS_MOORING = True
+                except Exception as e:
+                    HAS_MOORING = False                    
+                    pass
+                if(HAS_MOORING and (w == item.mooring['widget'])):
+                    self.tabs.setTabText(i,item.text())
+
+        # Check if the input is correct                
         if(('depth' in lab.lower())):
             depthbad = ''
             depth = item.text()
@@ -677,7 +747,7 @@ class mainWidget(QtWidgets.QWidget):
                 item = table.item(row,self.allmoorings['headers']['Name'])
                 HAS_MOORING = False
                 try:
-                    item.mooring
+                    item.mooring['moortable']
                     print('Has mooring')
                     HAS_MOORING=True
                 except Exception as e:
@@ -685,10 +755,10 @@ class mainWidget(QtWidgets.QWidget):
                     
                 if(HAS_MOORING): # Enter the new depth
                     rowcnt  = item.mooring['moortable'].rowCount()
-                    botitem = item.mooring['moortable'].takeItem(rowcnt,mooring['moortable_headers']['Depth'])
+                    botitem = item.mooring['moortable'].takeItem(rowcnt,item.mooring['moortable_headers']['Depth'])
                     botitem_new = QtWidgets.QTableWidgetItem( '{:3.3f}'.format(depth) )
                     print('Setting depth',rowcnt)
-                    item.mooring['moortable'].setItem(rowcnt-1,mooring['moortable_headers']['Depth'],botitem_new)
+                    item.mooring['moortable'].setItem(rowcnt-1,item.mooring['moortable_headers']['Depth'],botitem_new)
                     
             else:
                 table.setItem(row,column,item_new)            
@@ -850,7 +920,7 @@ class mainWidget(QtWidgets.QWidget):
             yaml.dump(summary, outfile, default_flow_style=False)
 
     def save_geojson(self):
-        data = self.create_mooring_dict()
+        data = self.create_mooring_dict(with_devices = False) # Only the metainformation, not the devices of the mooring
         filename,extension  = QtWidgets.QFileDialog.getSaveFileName(self,"Choose file for summary","","All Files (*)")
         self.save_geojson_summary(data,filename)
 
