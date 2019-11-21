@@ -660,9 +660,28 @@ class mainWidget(QtWidgets.QWidget):
         table.insertRow(nrows)
 
     def rem_mooring(self):
-        print('rem')        
-        pass
-
+        print('rem')
+        table = self.allmoorings['table']        
+        #for items in table.selectedItems():
+        rows = sorted(set(index.row() for index in
+                          table.selectedIndexes()),reverse=True)
+        for row in rows:
+            item = table.item(row,0)
+            name = item.text()
+            print('row',row,'name',name)
+            for i in range(self.tabs.count()):
+                w = self.tabs.widget(i)
+                try:
+                    item.mooring['widget']
+                    HAS_MOORING = True
+                except Exception as e:
+                    HAS_MOORING = False                    
+                    pass
+                if(HAS_MOORING and (w == item.mooring['widget'])):
+                    self.remove_tab(i)                    
+            
+            table.removeRow(row)
+            
     def edit_mooring(self):
         print('edit')
         table = self.allmoorings['table']        
