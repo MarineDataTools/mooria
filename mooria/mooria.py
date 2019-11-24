@@ -73,13 +73,15 @@ class mainWidget(QtWidgets.QWidget):
         self.tabs.addTab(self.allmoorings['widget'],'Moorings')        
         self.tabs.addTab(self.loadsave['widget'],'Load/Save')
         tabbar = self.tabs.tabBar()
-        tabbar.setTabButton(0, QtWidgets.QTabBar.RightSide,None)
-        tabbar.setTabButton(1, QtWidgets.QTabBar.RightSide,None)        
+        tabbar.setTabButton(0, QtWidgets.QTabBar.RightSide,None) # Make them not closable
+        tabbar.setTabButton(1, QtWidgets.QTabBar.RightSide,None) # Make them not closable
 
         self.layout = QtWidgets.QGridLayout(self)
         self.layout.addWidget(self.tabs,2,0,1,2)
 
-        self.add_new_mooring(name='Test',depth=100) # device and device_name have to be removed, thats for the moment only                
+        self.add_new_mooring(name='Test',depth=100) # device and device_name have to be removed, thats for the moment only
+        mooring_dict = self.create_mooring_dict()
+        self.plot_mooring_dict(mooring_dict['moorings'][0],dpi=300)
 
     def create_loadsave_widget(self):
         mooring = {}
@@ -163,9 +165,18 @@ class mainWidget(QtWidgets.QWidget):
         mooring['moortable'].cellClicked.connect(self._table_cell_was_clicked)        
         mooring['moortable'].mooring = mooring # Self reference for easy use later
         mooring['moortable'].setEditTriggers(QtWidgets.QAbstractItemView.NoEditTriggers) # Not editable
+
+        moortablewidget      = QtWidgets.QTableWidget() # Table with all available devices to choose from
+        moortablelayout      = QtWidgets.QGridLayout(moortablewidget)
+
+        mooring['moorplotbutton'] = QtWidgets.QPushButton('Plot')
+        mooring['moorplotbutton'].clicked.connect(self.plot_mooring)
+        mooring['moorplotbutton'].mooring = mooring
+        moortablelayout.addWidget(mooring['moortable'],0,0)
+        moortablelayout.addWidget(mooring['moorplotbutton'],1,0)        
         
         splitter = QtWidgets.QSplitter(QtCore.Qt.Horizontal)
-        splitter.addWidget(mooring['moortable'])
+        splitter.addWidget(moortablewidget)
         #splitter.addWidget(mooring['devwidget'])
         splitter.addWidget(mooring['scrollwidget'])
         splitter.addWidget(mooring['devtable'])
@@ -240,10 +251,18 @@ class mainWidget(QtWidgets.QWidget):
         device['name'] = device_name
         device['device_dict'] = device_dict.copy()
         device['device_widgets'] = {} # A dictionary with the same form as device_dict but with the responsible widgets in it
+        # Name of the device and add button
         mooring['devices'].append(device)        
         device['widget_layout'] = QtWidgets.QFormLayout(device['widget'])
         lab = QtWidgets.QLabel(device_name)
-        device['widget_layout'].addWidget(lab)
+
+        device['add']          = QtWidgets.QPushButton('Add to mooring')
+        device['add'].mooring  = mooring # This is a self reference to get the mooring by looking at the sender
+        device['add'].device   = device  # This is a self reference to get the device by looking at the sender
+        #device['widget_layout'].addWidget(device['add'])                            
+        device['add'].clicked.connect(self.add_device_to_mooring)
+        
+        device['widget_layout'].addRow(lab,device['add'])
         # Label
         lab = QtWidgets.QLabel('Label')
         lab.setToolTip('A custom name or description of the device')  
@@ -344,11 +363,6 @@ class mainWidget(QtWidgets.QWidget):
                     device['device_widgets'][k] = lineed
                     device['widget_layout'].addRow(lab2,lineed)                    
 
-        device['add']          = QtWidgets.QPushButton('Add to mooring')
-        device['add'].mooring  = mooring # This is a self reference to get the mooring by looking at the sender
-        device['add'].device   = device  # This is a self reference to get the device by looking at the sender
-        device['widget_layout'].addWidget(device['add'])                            
-        device['add'].clicked.connect(self.add_device_to_mooring)
         return device
 
 
@@ -524,6 +538,73 @@ class mainWidget(QtWidgets.QWidget):
         given devices and returns a dictionary containing both
 
         """
+        pass
+    
+    def plot_mooring(self):
+        """
+        """
+        # This is a bit clumsy, we first create a dict of all mooring
+        # and search then for the correct one 
+        mooring_plot = self.sender().mooring
+        mooring_dict_all = self.create_mooring_dict()
+        table = self.allmoorings['table']        
+        nrows = table.rowCount()
+        ncols = table.columnCount()
+
+        for i in range(nrows):
+            mooring_dict = {}
+            # Devices
+            if True:
+                try:
+                   mooring = table.item(i,self.allmoorings['headers']['Name']).mooring
+                   HAS_MOORING = True
+                except Exception as e:
+                   HAS_MOORING = False
+                   print('mooring save',e)
+
+                if HAS_MOORING:
+                   print('Has mooring')
+                   if(mooring_plot == mooring):
+                       print('Plotting mooring')
+                       mooring_dict = mooring_dict_all['moorings'][i]
+                       self.plot_mooring_dict(mooring_dict)
+
+
+    def plot_mooring_dict(self,mooring_dict,dpi=300):
+        """ Plots a mooring dictionary using matplotlib
+        """
+        name  = mooring_dict['name']
+        depth = float(mooring_dict['depth'])
+        surface = 0
+        if(depth < surface):
+            surface = depth - 10
+            
+        fig       = Figure(dpi=dpi)
+        fig.set_size_inches(10,10)
+        figwidget = QtWidgets.QWidget()
+        figwidget.setWindowTitle(name)
+        canvas    = FigureCanvas(fig)
+        canvas.setParent(figwidget)
+        plotLayout = QtWidgets.QVBoxLayout()
+        plotLayout.addWidget(canvas)
+        figwidget.setLayout(plotLayout)
+        #canvas.setMinimumSize(canvas.size()) # Prevent to make it smaller than the original size
+        mpl_toolbar = NavigationToolbar(canvas, figwidget)
+        plotLayout.addWidget(mpl_toolbar)
+
+        # Plot the mooring
+        ax = fig.add_axes([.1,.1,.8,.8])
+        ax.plot([-.5,.5],[depth,depth],'-',color='grey',lw=4)
+        ax.plot([-.5,.5],[surface,surface],'-',color='b',lw=4)
+        YL = surface - depth
+        print([-1,1],[depth-YL/10,surface+YL/10])
+        ax.set_xlim([-1,1])
+        ax.set_ylim([depth-YL/10,surface+YL/10])
+        ax.set_ylabel('Depth [m]')
+        
+        canvas.draw()        
+        figwidget.show()        
+        
 
     def create_mooring_dict(self,with_devices=True):
         """Function that creates from all available information a dictionary
