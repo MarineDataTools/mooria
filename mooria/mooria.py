@@ -287,6 +287,9 @@ class mainWidget(QtWidgets.QWidget):
         # Depth
         lab = QtWidgets.QLabel('Location')
         loced = QtWidgets.QLineEdit()
+        #loced.textChanged.connect(self.update_mooring_table)
+        loced.editingFinished.connect(self.update_mooring_table_wrapper)
+        loced.mooring = mooring
         locref = QtWidgets.QComboBox()
         locref.addItems(['Depth','Above bottom'])
         layout = QtWidgets.QHBoxLayout()
@@ -429,14 +432,61 @@ class mainWidget(QtWidgets.QWidget):
                 self.update_device_widget(mooring, device_blank)                
                 # TODO, could save the removed devices
 
-    def sort_devices_in_mooring(self,mooring):
+    def sort_devices_in_mooring(self):
         """
         """
-        print('Updating')
+        # Legacy, replacing with update mooring table
+        print('Depth changed')
+        table = self.sender().mooring['moortable']
+        table.setSortingEnabled(True)
+        table.sortByColumn(0,0)
+
+    def update_mooring_table_wrapper(self):
+        self.update_mooring_table(self.sender().mooring)
+        
+
+    def update_mooring_table(self,mooring):
+        """
+        """
+        table = mooring['moortable']
+        table.setSortingEnabled(False)
+        depth = mooring['depth']        
+        if True:
+            # Calculate depth/MAB of all devices listed
+            rows = table.rowCount()        
+            for row in range(rows-1): # The last one is the bottom
+                devitem = table.item(row,mooring['moortable_headers']['Device'])
+                print('row',row,devitem.text())
+                devtmp  = devitem.device
+                try:
+                    depthtmp = float(devtmp['device_widgets']['location'][0].text())
+                except Exception as e:
+                    depthtmp = np.NaN
+
+                # Check if we have depth or MAB
+                refsystem = devtmp['device_widgets']['location'][1].currentText()
+                if('depth' in refsystem.lower()):
+                    depthdev = depthtmp
+                    MABdev   = depth - depthdev
+                else:
+                    MABdev   = depthtmp
+                    depthdev = depth - depthtmp
+
+                item = QCustomTableWidgetItem(depthdev)
+                table.setItem(row,mooring['moortable_headers']['Depth'],item)            
+                item = QtWidgets.QTableWidgetItem( '{:3.3f}'.format(MABdev) ) 
+                table.setItem(row,mooring['moortable_headers']['MAB'],item)
+                sernr = devtmp['device_widgets']['Serial Number'].text()
+                item = QtWidgets.QTableWidgetItem(sernr)
+                table.setItem(row,mooring['moortable_headers']['Serial Nr.'],item)                
+                #mooring['moortable_header_labels'] = ['Depth','MAB','Device','Serial Nr.','Parameter']
+                #mooring['moortable_headers']= {}
+
+        table.setSortingEnabled(True)
+        table.sortByColumn(0,0)
                 
     def add_device_to_mooring(self):
         print('Add')
-
         # The mooring and device are references for convenience in create_device_widget
         mooring      = self.sender().mooring
         device       = self.sender().device
@@ -450,34 +500,11 @@ class mainWidget(QtWidgets.QWidget):
         # Add new device (later a sorting will be done)
         row = 0
         table.insertRow(row)
-        refsystem = device['device_widgets']['location'][1].currentText()
-        try:
-            depthtmp = float(device['device_widgets']['location'][0].text())
-        except Exception as e:
-            print('hgfhghj',e)
-            depthtmp = np.NaN
-            
-        if('depth' in refsystem.lower()):
-            depthdev = depthtmp
-            MABdev   = depth - depthdev            
-
-        else:
-            MABdev   = depthtmp
-            depthdev = depth - depthtmp
-
-        print('hallo!',MABdev,depthdev,depth)
-        #item = QtWidgets.QTableWidgetItem( '{:3.3f}'.format(depthdev) )
-        item = QCustomTableWidgetItem(depthdev)
-        #item = QtWidgets.QTableWidgetItem()
-        #item.setData(QtCore.Qt.DisplayRole,depthdev)
-        #item.setData(QtCore.Qt.EditRole,depthdev)
-        table.setItem(row,mooring['moortable_headers']['Depth'],item)            
-        item = QtWidgets.QTableWidgetItem( '{:3.3f}'.format(MABdev) ) 
-        table.setItem(row,mooring['moortable_headers']['MAB'],item)
 
         item = QtWidgets.QTableWidgetItem( device['name'] )
         item.device = device
         table.setItem(row,mooring['moortable_headers']['Device'],item)
+
         # Change the add button
         device['add'].setText('Remove from mooring')
         device['add'].clicked.disconnect(self.add_device_to_mooring)
@@ -500,36 +527,12 @@ class mainWidget(QtWidgets.QWidget):
                 item.device = None
                 dtable.setItem(i,0,item)
                 self.update_device_widget(mooring, device_blank)        
-        
+                
+        self.update_mooring_table(mooring)
         table.setSortingEnabled(True)
         table.sortByColumn(0,0)
         #table.sortItems(0, QtCore.Qt.AscendingOrder)
-        if False:
-            # Calculate depth/MAB of all devices listed
-            rows = table.rowCount()        
-            depths = []
-            MABs = []
-            for i in range(rows-1): # The last one is the bottom
-                devitem = table.item(i,mooring['moortable_headers']['Device'])
-                print('i',i,devitem.text())
-                devtmp  = devitem.device
-                try:
-                    depthtmp = float(devtmp['device_widgets']['location'][0].text())
-                except:
-                    depthtmp = np.NaN
 
-
-                # Check if we have depth or MAB
-                refsystem = device['device_widgets']['location'][1].currentText()
-                if('depth' in refsystem.lower()):
-                    depthdev = depthtmp
-                    MABdev   = depth - depthdev
-                else:
-                    MABdev   = depthtmp
-                    depthdev = depth - depthtmp
-
-                depths.append(depthdev)
-                MABs.append(MABdev)            
 
 
 
