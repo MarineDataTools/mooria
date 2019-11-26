@@ -108,7 +108,11 @@ class mainWidget(QtWidgets.QWidget):
         mooring['table']  = QtWidgets.QTableWidget()
         mooring['table'].cellChanged.connect(self._allmoorings_cell_changed)
         mooring['edmoor']    = QtWidgets.QPushButton('Edit')
-        mooring['edmoor'].clicked.connect(self.edit_mooring)                
+        mooring['edmoor'].clicked.connect(self.edit_mooring)
+        mooring['addrmoor']    = QtWidgets.QPushButton('Add Drawing')
+        mooring['addrmoor'].clicked.connect(self.add_field)
+        mooring['adpimoor']    = QtWidgets.QPushButton('Add Picture')
+        mooring['adpimoor'].clicked.connect(self.add_field)                
         mooring['addmoor']    = QtWidgets.QPushButton('Add')
         mooring['addmoor'].clicked.connect(self.add_mooring)
         mooring['remmoor']    = QtWidgets.QPushButton('Rem')
@@ -116,11 +120,14 @@ class mainWidget(QtWidgets.QWidget):
         mooring['resize']    = QtWidgets.QPushButton('Resize to fit')
         mooring['resize'].clicked.connect(self._resize_to_fit)                        
         # Layout
-        mooring['layout'].addWidget(mooring['table'],0,0,1,2)
+        mooring['layout'].addWidget(mooring['table'],0,0,1,3)
         mooring['layout'].addWidget(mooring['addmoor'],1,0)
-        mooring['layout'].addWidget(mooring['remmoor'],1,1)
-        mooring['layout'].addWidget(mooring['edmoor'],2,0)
+        mooring['layout'].addWidget(mooring['remmoor'],2,0)
+        mooring['layout'].addWidget(mooring['edmoor'],1,1)
         mooring['layout'].addWidget(mooring['resize'],2,1)        
+        mooring['layout'].addWidget(mooring['addrmoor'],1,2)
+        mooring['layout'].addWidget(mooring['adpimoor'],2,2)                
+
 
         # Creates the mooring table
         table = mooring['table']
@@ -133,7 +140,7 @@ class mainWidget(QtWidgets.QWidget):
         mooring['headers']['Longitude'] = 5
         mooring['headers']['Latitude']  = 6
         mooring['headers']['Campaign']  = 7        
-        mooring['headers']['Comment']  = 8              
+        mooring['headers']['Comment']   = 8
         table.setColumnCount(len(mooring['headers']))
         hlabels = list(mooring['headers'])
         mooring['header_labels'] = hlabels
@@ -703,10 +710,20 @@ class mainWidget(QtWidgets.QWidget):
             table.setItem(0,self.allmoorings['headers']['Deployed'],item)
             item = QtWidgets.QTableWidgetItem( mooring['recovered'] )            
             table.setItem(0,self.allmoorings['headers']['Recovered'],item)
-            item = QtWidgets.QTableWidgetItem( '{:3.5f}'.format(mooring['lon']) )
+            
+            try:
+                lonstr = '{:3.5f}'.format(mooring['lon'])
+            except:
+                lonstr = ''
 
+            try:                
+                latstr = '{:3.5f}'.format(float(mooring['lat']))
+            except:
+                latstr = ''                
+                
+            item = QtWidgets.QTableWidgetItem( lonstr )
             table.setItem(0,self.allmoorings['headers']['Longitude'],item)
-            item = QtWidgets.QTableWidgetItem( '{:3.5f}'.format(mooring['lat']) )
+            item = QtWidgets.QTableWidgetItem( latstr )
             table.setItem(0,self.allmoorings['headers']['Latitude'],item)            
             item = QtWidgets.QTableWidgetItem( mooring['comment'] )            
             table.setItem(0,self.allmoorings['headers']['Comment'],item)
@@ -765,6 +782,12 @@ class mainWidget(QtWidgets.QWidget):
                     self.remove_tab(i)                    
             
             table.removeRow(row)
+
+    def add_field(self):
+        bstr = self.sender().text()
+        print(bstr)
+        self._addfieldw = QtWidgets.QWidget()
+        self._addfieldw.show()
             
     def edit_mooring(self):
         print('edit')
