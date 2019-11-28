@@ -176,11 +176,16 @@ class mainWidget(QtWidgets.QWidget):
         moortablewidget      = QtWidgets.QTableWidget() # Table with all available devices to choose from
         moortablelayout      = QtWidgets.QGridLayout(moortablewidget)
 
+        mooring['moorbasicbutton'] = QtWidgets.QPushButton('Basic data of ' + str(mooring_name))
+        mooring['moorbasicbutton'].clicked.connect(self.show_basic_data_widget)
+        mooring['moorbasicbutton'].mooring = mooring
+        mooring['moorbasicbutton'].basic_widget = QtWidgets.QWidget()
         mooring['moorplotbutton'] = QtWidgets.QPushButton('Plot')
         mooring['moorplotbutton'].clicked.connect(self.plot_mooring)
         mooring['moorplotbutton'].mooring = mooring
-        moortablelayout.addWidget(mooring['moortable'],0,0)
-        moortablelayout.addWidget(mooring['moorplotbutton'],1,0)        
+        moortablelayout.addWidget(mooring['moorbasicbutton'],0,0)                
+        moortablelayout.addWidget(mooring['moortable'],1,0)
+        moortablelayout.addWidget(mooring['moorplotbutton'],2,0)        
         
         splitter = QtWidgets.QSplitter(QtCore.Qt.Horizontal)
         splitter.addWidget(moortablewidget)
@@ -235,6 +240,13 @@ class mainWidget(QtWidgets.QWidget):
 
 
         return mooring
+
+    def show_basic_data_widget(self):
+        print('Basic information widget')
+        mooring = self.sender().mooring
+        widget = self.sender().basic_widget
+        widget_wrapped = {'widget':widget}
+        self.update_device_widget(mooring,widget_wrapped)
 
     def update_device_widget(self,mooring,device_new):
         """ updates the device widget with a new one
