@@ -175,14 +175,46 @@ class mainWidget(QtWidgets.QWidget):
 
         moortablewidget      = QtWidgets.QTableWidget() # Table with all available devices to choose from
         moortablelayout      = QtWidgets.QGridLayout(moortablewidget)
-
-        mooring['moorbasicbutton'] = QtWidgets.QPushButton('Basic data of ' + str(mooring_name))
+        # Create the widgets for the basic information
+        mooring['moorbasicbutton']              = QtWidgets.QPushButton('Basic data of ' + str(mooring_name))
         mooring['moorbasicbutton'].clicked.connect(self.show_basic_data_widget)
-        mooring['moorbasicbutton'].mooring = mooring
-        mooring['moorbasicbutton'].basic_widget = QtWidgets.QWidget()
-        mooring['moorplotbutton'] = QtWidgets.QPushButton('Plot')
+        mooring['moorbasicbutton'].mooring      = mooring
+        mooring['moorbasicwidget']              = QtWidgets.QWidget()
+        mooring['moorbasicbutton'].basic_widget = mooring['moorbasicwidget']
+        # I need two layouts, because I cant remove widgets from Formlayout without problems, so I use formlayout and gridlayout
+        mooring['moorbasicwidget_layout']       = QtWidgets.QFormLayout()
+        mooring['moorbasicwidget_mlayout']       = QtWidgets.QVBoxLayout(mooring['moorbasicwidget'])
+        mooring['moorbasicwidget_dlayout']       = QtWidgets.QGridLayout()
+        mooring['moorbasicwidget_dlayout'].setAlignment(QtCore.Qt.AlignTop)
+        mooring['moorbasicwidget_mlayout'].addLayout(mooring['moorbasicwidget_layout'])
+        mooring['moorbasicwidget_mlayout'].addLayout(mooring['moorbasicwidget_dlayout'])        
+        # Fill the basic widget with information
+        lab = QtWidgets.QLabel('Longitude')
+        mooring['moorbasicwidget_loned'] = QtWidgets.QLineEdit()
+        mooring['moorbasicwidget_layout'].addRow(lab,mooring['moorbasicwidget_loned'])
+        lab = QtWidgets.QLabel('Latitude')
+        mooring['moorbasicwidget_lated'] = QtWidgets.QLineEdit()
+        mooring['moorbasicwidget_layout'].addRow(lab,mooring['moorbasicwidget_lated'])
+        lab = QtWidgets.QLabel('Deployed')
+        mooring['moorbasicwidget_deped'] = QtWidgets.QLineEdit()
+        mooring['moorbasicwidget_layout'].addRow(lab,mooring['moorbasicwidget_deped'])
+        lab = QtWidgets.QLabel('Recovered')
+        mooring['moorbasicwidget_reced'] = QtWidgets.QLineEdit()
+        mooring['moorbasicwidget_layout'].addRow(lab,mooring['moorbasicwidget_reced'])                
+        lab = QtWidgets.QLabel('Comment')
+        mooring['moorbasicwidget_comed'] = QtWidgets.QLineEdit()
+        mooring['moorbasicwidget_layout'].addRow(lab,mooring['moorbasicwidget_comed'])
+        lab = QtWidgets.QLabel('Drawing/Picture')
+        mooring['moorbasicwidget_drawadd'] = QtWidgets.QPushButton('Add')
+        mooring['moorbasicwidget_drawadd'].clicked.connect(self.add_drawing)
+        mooring['moorbasicwidget_layout'].addRow(lab,mooring['moorbasicwidget_drawadd'])
+        mooring['moorbasicwidget_drawadd'].layout = mooring['moorbasicwidget_dlayout']
+        mooring['moorbasicwidget_drawadd'].mooring = mooring
+        mooring['moorbasicwidget_drawings'] = [] # A list of all drawings        
+        # Plot the mooring
+        mooring['moorplotbutton']               = QtWidgets.QPushButton('Plot')
         mooring['moorplotbutton'].clicked.connect(self.plot_mooring)
-        mooring['moorplotbutton'].mooring = mooring
+        mooring['moorplotbutton'].mooring       = mooring
         moortablelayout.addWidget(mooring['moorbasicbutton'],0,0)                
         moortablelayout.addWidget(mooring['moortable'],1,0)
         moortablelayout.addWidget(mooring['moorplotbutton'],2,0)        
@@ -241,6 +273,54 @@ class mainWidget(QtWidgets.QWidget):
 
         return mooring
 
+    def add_drawing(self):
+        layout  = self.sender().layout
+        rows = layout.rowCount()
+        mooring = self.sender().mooring
+        drawnum = len(mooring['moorbasicwidget_drawings'])
+        lab     = QtWidgets.QLabel('Drawing')
+        mooring['moorbasicwidget_drawings'].append(QtWidgets.QLineEdit())
+        butrem     = QtWidgets.QPushButton('Remove')
+        butrem.clicked.connect(self.rem_drawing)        
+        butchoose  = QtWidgets.QPushButton('Choose')
+        butchoose.clicked.connect(self.choose_drawing)
+        butrem.layout = layout
+        butrem.mooring = mooring
+        butrem.widgets = [lab,mooring['moorbasicwidget_drawings'][-1],butchoose,butrem]
+        layout.addWidget(lab,rows+1,0)        
+        layout.addWidget(mooring['moorbasicwidget_drawings'][-1],rows+1,1)
+        layout.addWidget(butchoose,rows+1,2)
+        layout.addWidget(butrem,rows+1,3)
+
+    def choose_drawing(self):
+        filename,extension  = QtWidgets.QFileDialog.getOpenFileName(self,"Choose file to add as drawing","","All Files (*)")
+        
+
+    def rem_drawing(self):
+        print('rem')
+        layout  = self.sender().layout
+        mooring = self.sender().mooring
+        cnt = layout.count()
+
+        for i in range(cnt,0):
+            print(i)
+            item = layout.itemAt(i)
+            #
+            #if(
+            ## REmove the items
+            #for w in self.sender().widgets:
+            #    if(item == w):
+            #        itemaway = layout.takeAt(i)
+            #        itemaway.deleteLater()
+
+        for w in self.sender().widgets:
+            for i,w2 in enumerate(mooring['moorbasicwidget_drawings']):
+                if(w == w2):
+                    print('pop')
+                    mooring['moorbasicwidget_drawings'].pop(i)
+                    break
+            w.deleteLater()                                
+        
     def show_basic_data_widget(self):
         print('Basic information widget')
         mooring = self.sender().mooring
